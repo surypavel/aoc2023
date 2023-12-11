@@ -1,6 +1,10 @@
 {:ok, str} = File.read("11.txt")
 
 defmodule AOC do
+  # a) @factor 2
+  # b) @factor 1000000
+  @factor 1000000
+
   def find_stars(input) do
     input
     |> String.split("\n")
@@ -30,8 +34,9 @@ defmodule AOC do
 
     stars_len =
       Enum.filter(e, fn item -> item > min and item < max end) |> Enum.count()
+    diff = max - min - 1
 
-    max(0, (2 * (max - min - 1) - stars_len + 1))
+    max(0, (stars_len + @factor * (diff - stars_len) + 1))
   end
 
   def distance({x1, y1}, {x2, y2}, {ex, ey}) do
