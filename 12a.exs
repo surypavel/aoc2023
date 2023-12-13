@@ -2,7 +2,9 @@
 
 defmodule AOC do
   def parse_line(str) do
-    [records, checksum] = String.split(str, " ")
+    [records_1, checksum_1] = String.split(str, " ")
+    records = (1..1) |> Enum.map(fn _ -> records_1 end) |> Enum.join("?")
+    checksum = (1..1) |> Enum.map(fn _ -> checksum_1 end) |> Enum.join(",")
     # Add . to the beginning for easier parsing
     {".#{records}", String.split(checksum, ",") |> Enum.map(&String.to_integer/1)}
   end
@@ -44,8 +46,6 @@ end
 str
 |> String.split("\n")
 |> Enum.map(fn line ->
-  line |> AOC.parse_line() |> AOC.calc_possibilities()
+  line |> AOC.parse_line() |> AOC.calc_possibilities() |> IO.inspect()
 end)
-|> IO.inspect()
-|> Enum.sum()
 |> IO.puts()
