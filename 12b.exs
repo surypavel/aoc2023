@@ -28,35 +28,45 @@ defmodule AOC do
 
   def _calc_possibilities({"", []}), do: 1
   def _calc_possibilities({"", _}), do: 0
-  def _calc_possibilities({".", []}), do: 1
-  def _calc_possibilities({".", _}), do: 0
-  def _calc_possibilities({"#" <> _tail, _}), do: 0
-  def _calc_possibilities({".#" <> _tail, []}), do: 0
+  def _calc_possibilities({"#" <> _tail, []}), do: 0
 
-  def _calc_possibilities({".." <> tail, checksum}),
-    do: AOC._calc_possibilities({"." <> tail, checksum})
-
-  def _calc_possibilities({"?" <> tail, checksum}) do
-    a = AOC._calc_possibilities({"." <> tail, checksum})
-    b = AOC._calc_possibilities({"#" <> tail, checksum})
-    a + b
-  end
-
-  def _calc_possibilities({".?" <> tail, checksum}) do
-    a = AOC._calc_possibilities({".." <> tail, checksum})
-    b = AOC._calc_possibilities({".#" <> tail, checksum})
-    a + b
-  end
-
-  def _calc_possibilities({".#" <> tail, [instruction | rest]}) do
-    {prev, next} = String.split_at(tail, instruction - 1)
-    consistent = !String.contains?(prev, ".") and String.length(prev) == instruction - 1
+  def _calc_possibilities({"#" <> tail, [instruction | rest]}) do
+    {prev, next} = String.split_at(tail, instruction)
+    length_diff = String.length(prev) - instruction
+    consistent = length_diff == -1 or (String.ends_with?(prev, "?") and length_diff == 0)
 
     if consistent do
       AOC._calc_possibilities({next, rest})
     else
       0
     end
+  end
+
+  def _calc_possibilities({str, instructions}) do
+    q_count = str |> String.split("#") |> Enum.at(0) |> String.length()
+    {part1, part2} = String.split_at(str, q_count)
+
+    if String.length(part2) == 0 do
+      AOC._calc_possibilities_optimised({str, instructions})
+    else
+      part2_end = String.slice(part2, 1..-1)
+
+      dots =
+        if String.length(part2_end) > 0 do
+          AOC.calc_possibilities({[part1, part2_end], instructions})
+        else
+          AOC._calc_possibilities_optimised({part1, instructions})
+        end
+
+      qs = AOC._calc_possibilities({"#{part1}?#{part2_end}", instructions})
+      qs - dots
+    end
+  end
+
+  def _calc_possibilities({"?" <> tail, checksum}) do
+    a = AOC._calc_possibilities({tail, checksum})
+    b = AOC._calc_possibilities({"#" <> tail, checksum})
+    a + b
   end
 
   def _calc_possibilities_optimised({str, instructions}) do
@@ -72,6 +82,21 @@ defmodule AOC do
     end
   end
 
+  def makes_sense(x, y) do
+    map_sharps = Enum.sum(x)
+    map_dots = Enum.count(x) - 1
+    freq = Enum.frequencies(y)
+    sharps = Map.get(freq, "#", 0)
+    dots = Map.get(freq, ".", 0)
+    qs = Map.get(freq, "?", 0)
+
+    # ["???###?...", [2, 3]]
+    map_sharps >= sharps and
+      map_sharps + map_dots <= Enum.count(y) and
+      sharps + qs >= map_sharps and
+      dots + qs >= map_dots
+  end
+
   def calc_possibilities({[], []}), do: 1
   def calc_possibilities({[], _}), do: 0
 
@@ -84,14 +109,14 @@ defmodule AOC do
       |> Enum.map(fn {_, i} ->
         instruction_slice = instructions |> Enum.slice(0..i)
 
-        if Enum.sum(instruction_slice) + Enum.count(instruction_slice) - 1 > head do
+        if !AOC.makes_sense(instruction_slice, String.graphemes(head)) do
           0
         else
           x =
             if all_q do
               AOC._calc_possibilities_optimised({head, instruction_slice})
             else
-              AOC._calc_possibilities({".#{head}", instruction_slice})
+              AOC._calc_possibilities({head, instruction_slice})
             end
 
           if x > 0 do
