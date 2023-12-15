@@ -12,14 +12,36 @@ defmodule Math do
   end
 end
 
+defmodule Combinations do
+  @doc """
+  This function lists all combinations of `num` elements from the given `list`
+  """
+  def product(list, num)
+  def product(list, 1), do: Enum.map(list, fn item -> [item] end)
+  def product(list = [], _num), do: list
+
+  def product(list, num) do
+    for i <- Combinations.product(list, num - 1), j <- list, do: [j | i]
+  end
+
+  def combinations(list, num)
+  def combinations(_list, 0), do: [[]]
+  def combinations(list = [], _num), do: list
+
+  def combinations([head | tail], num) do
+    Enum.map(combinations(tail, num - 1), &[head | &1]) ++
+      combinations(tail, num)
+  end
+end
+
 defmodule AOC do
   def parse_line(str) do
     [records_1, checksum_1] = String.split(str, " ")
-    records = 1..5 |> Enum.map(fn _ -> records_1 end) |> Enum.join("?")
-    checksum = 1..5 |> Enum.map(fn _ -> checksum_1 end) |> Enum.join(",")
+    records = 1..2 |> Enum.map(fn _ -> records_1 end) |> Enum.join("?")
+    checksum = 1..2 |> Enum.map(fn _ -> checksum_1 end) |> Enum.join(",")
 
     {
-      records |> String.replace(~r/\.+/, ".") |> String.trim(".") |> String.split("."),
+      records,
       String.split(checksum, ",") |> Enum.map(&String.to_integer/1)
     }
   end
@@ -152,10 +174,95 @@ defmodule AOC do
 
     result
   end
+
+  def get_splits(i2, comb) do
+    comb
+    |> Enum.map_reduce(0, fn comb1, acc ->
+      {i2 |> Enum.drop(acc) |> Enum.take(comb1), acc + comb1}
+    end)
+    |> elem(0)
+  end
+
+  def valid_splits(i1, i2) do
+    stream_len = Enum.count(i1)
+    instruction_len = Enum.count(i2)
+
+    Combinations.product(0..1 |> Enum.to_list(), stream_len)
+    |> Enum.filter(fn comb -> Enum.sum(comb) == instruction_len end)
+    |> Enum.filter(fn comb ->
+      i2
+      |> AOC.get_splits(comb)
+      |> Enum.map(fn t -> Enum.sum(t) + Enum.count(t) - 1 end)
+      |> Enum.zip(i1)
+      |> Enum.all?(fn {t, i1_item} -> t <= i1_item end)
+    end)
+  end
+
+  def calc_comb(split, i1) do
+    space = Enum.count(split) + Enum.sum(split) - 1
+    diff = i1 - space
+    n = Enum.count(split) + diff
+    k = diff
+
+    if diff >= 0 do
+      Math.comb(n, k)
+    else
+      0
+    end
+  end
+
+  def elementary_combinations(i1, i2) do
+    AOC.valid_splits(i1, i2)
+    |> Enum.map(fn split ->
+      AOC.get_splits(i2, split)
+      |> Enum.zip(i1)
+      |> Enum.map(fn {split, i1} -> AOC.calc_comb(split, i1) end)
+      |> Enum.product()
+    end)
+    |> Enum.sum()
+  end
+
+  def composite_combinations(str, instructions) do
+    sharps =
+      str
+      |> String.graphemes()
+      |> Enum.with_index()
+      |> Enum.filter(fn {val, _} -> val == "#" end)
+      |> Enum.map(fn {_, i} -> i end)
+
+    all_q = str |> String.replace("#", "?")
+
+    all =
+      all_q
+      |> String.split(".")
+      |> Enum.filter(fn item -> item != "" end)
+      |> Enum.map(fn item -> String.length(item) end)
+
+    array =
+      0..(Enum.count(sharps))
+      |> Enum.map(fn c ->
+        sharps
+        |> Combinations.combinations(c)
+        |> Enum.map(fn combination ->
+          Enum.reduce(combination, String.graphemes(all_q), fn curr, acc ->
+            List.replace_at(acc, curr, ".")
+          end)
+          |> Enum.join()
+          |> String.split(".")
+          |> Enum.filter(fn item -> item != "" end)
+          |> Enum.map(fn item -> String.length(item) end)
+          |> AOC.elementary_combinations(instructions)
+        end)
+        |> Enum.sum()
+      end)
+      |> (&[0 | &1]).()
+      |> Enum.map_every(2, fn x -> -x end)
+      |> Enum.sum()
+  end
 end
 
 str
 |> String.split("\n")
 |> Enum.map(fn line ->
-  line |> AOC.parse_line() |> AOC.calc_possibilities() |> IO.inspect()
+  line |> AOC.parse_line() |> (fn {x, y} -> AOC.composite_combinations(x,y) end).() |> IO.inspect()
 end)
