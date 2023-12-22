@@ -32,9 +32,17 @@ defmodule AOC do
   end
 
   def matches_eq(_part, nil), do: true
-  def matches_eq(part, { var, op, num }) do
+
+  def matches_eq(part, {var, op, num}) do
     value = Access.get(part, var)
-    condition = if op == "<" do &Kernel.</2 else &Kernel.>/2 end
+
+    condition =
+      if op == "<" do
+        &Kernel.</2
+      else
+        &Kernel.>/2
+      end
+
     condition.(value, num)
   end
 
