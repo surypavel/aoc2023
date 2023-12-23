@@ -3,13 +3,14 @@
 defmodule AOC do
   def parse_line(str) do
     [records_1, checksum_1] = String.split(str, " ")
-    records = 1..2 |> Enum.map(fn _ -> records_1 end) |> Enum.join("?")
-    checksum = 1..2 |> Enum.map(fn _ -> checksum_1 end) |> Enum.join(",")
+    records = 1..4 |> Enum.map(fn _ -> records_1 end) |> Enum.join("?")
+    checksum = 1..4 |> Enum.map(fn _ -> checksum_1 end) |> Enum.join(",")
     {records, String.split(checksum, ",") |> Enum.map(&String.to_integer/1)}
   end
 
   def is_possible(records, checksum) do
-    regex_str = checksum |> Enum.map(fn num -> "(\\?|#){#{num}}" end) |> Enum.join("(\\.|\\?)+")
+    regex_groups = checksum |> Enum.map(fn num -> "(\\?|#){#{num}}" end) |> Enum.join("(\\.|\\?)+")
+    regex_str = "^(\\.|\\?)*#{regex_groups}(\\.|\\?)*$"
     {:ok, regex} = Regex.compile(regex_str)
     Regex.match?(regex, records)
   end
@@ -50,6 +51,7 @@ end
 str
 |> String.split("\n")
 |> Enum.map(&AOC.parse_line/1)
+|> Enum.take(3)
 |> Enum.map(fn line -> AOC.calc_possibilities(line) |> IO.inspect() end)
 |> Enum.sum()
 |> IO.inspect()
